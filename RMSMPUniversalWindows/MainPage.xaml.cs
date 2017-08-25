@@ -17,6 +17,9 @@ using System.Threading.Tasks;
 using Windows.Devices.SerialCommunication;
 using Windows.Storage.Streams;
 using Windows.Devices.Enumeration;
+using Microsoft.Azure.Devices.Client;
+using System.Text;
+using Newtonsoft.Json;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=402352&clcid=0x409
 
@@ -33,13 +36,11 @@ namespace RMSMPUniversalWindows
         DataReader dataReaderObject = null;
         private string arduinoSerialName = "Arduino";
         private CancellationTokenSource ReadCancellationTokenSource;
+        List<DataPoints> dataPointsList = new List<DataPoints>();
 
         public MainPage()
         {
-            this.InitializeComponent();
-
-
-         
+            this.InitializeComponent();        
         }
 
         private async void Page_Loaded(object sender, RoutedEventArgs e)
@@ -67,7 +68,7 @@ namespace RMSMPUniversalWindows
             Listen();
         }
 
-        private async void Stop_Click(object sender, RoutedEventArgs e)
+        private void Stop_Click(object sender, RoutedEventArgs e)
         {
             Start.IsEnabled = true;
             Stop.IsEnabled = false;
@@ -76,6 +77,10 @@ namespace RMSMPUniversalWindows
 
         }
 
+        /// <summary>
+        /// Connect application to arduino
+        /// </summary>
+        /// <returns></returns>
         private async Task ConnectToArduino()
         {
             List<DeviceInformation> listOfDevices = new List<DeviceInformation>();
@@ -133,7 +138,6 @@ namespace RMSMPUniversalWindows
         {
             try
             {
-
                 if (serialPort != null)
                 {
                     dataReaderObject = new DataReader(serialPort.InputStream);
@@ -163,15 +167,13 @@ namespace RMSMPUniversalWindows
                     dataReaderObject = null;
                 }
             }
-
-
         }
 
         private async Task ReadAsync(CancellationToken cancellationToken)
         {
             Task<UInt32> loadAsyncTask;
 
-            uint ReadBufferLength = 1024;
+            uint ReadBufferLength = 4096;
 
             // If task cancellation was requested, comply
             cancellationToken.ThrowIfCancellationRequested();
@@ -189,7 +191,13 @@ namespace RMSMPUniversalWindows
                 if (bytesRead > 0)
                 {
                     string message = dataReaderObject.ReadString(bytesRead);
-                    data.Text = message;
+
+                    if (message.StartsWith("{\"returnAirTemp\""))
+                                            {
+                        ProcessData(message);
+                    }
+
+
                     //p.updateDataLog(message);
                     //dynamic d = JsonConvert.DeserializeObject(message);
                     //d.timeStamp = DateTime.Now;
@@ -231,6 +239,59 @@ namespace RMSMPUniversalWindows
             serialPort = null;
 
             
+        }
+
+        private void ProcessData(string message)
+        {
+            data.Text = message;
+            //  deserialize data into object
+            DataPoints dataPoints = JsonConvert.DeserializeObject<DataPoints>(message);
+            // compare time stamps - we want to update every x seconds
+            // if the data list is empty, then we want to add to it
+            if(dataPointsList.Count() > 0)
+            {
+                // 
+                if(dataPointsList[dataPointsList.Count()-1].groupingStamp > dataPoints.timeStamp.AddMilliseconds(-Settings.uploadInterval))
+                {
+                    dataPoints.groupingStamp = dataPointsList[dataPointsList.Count()-1].groupingStamp;
+                    dataPointsList.Add(dataPoints);
+                }
+                else
+                {
+                    // submit old data and start again
+                    DataPoints p = new DataPoints(dataPointsList);
+                    string payload = JsonConvert.SerializeObject(p);
+                    n.Text = p.sourceCount.ToString();
+                    x.Text = p.returnAirHumidity.ToString();
+
+                    //SendDeviceToCloudMessagesAsync(payload);
+                    //
+                    dataPointsList.Clear();
+                    dataPoints.groupingStamp = dataPoints.timeStamp;
+                    dataPointsList.Add(dataPoints);
+                }
+            }
+            else
+            {
+                dataPoints.groupingStamp = dataPoints.timeStamp;
+                dataPointsList.Add(dataPoints);
+            }
+
+
+            //SendDeviceToCloudMessagesAsync(message);
+        }
+
+        async void SendDeviceToCloudMessagesAsync(string msg)
+        {
+
+            var deviceClient = DeviceClient.Create(Settings.iotHubUri,
+            AuthenticationMethodFactory.
+            CreateAuthenticationWithRegistrySymmetricKey(Settings.deviceId, Settings.deviceKey),
+            TransportType.Http1);
+
+            var message = new Message(Encoding.ASCII.GetBytes(msg));
+
+            await deviceClient.SendEventAsync(message);
         }
     }
 }

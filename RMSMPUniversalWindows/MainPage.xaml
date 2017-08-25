@@ -13,6 +13,9 @@
             <Button Name="Start" Content="Start" Click="Start_Click"/>
             <Button Name="Stop" Content="Stop" Click="Stop_Click"/>         
             <TextBlock Name="data"></TextBlock>
+            <TextBlock Name="n"></TextBlock>
+            <TextBlock Name="x"></TextBlock>
+
         </StackPanel>
 
         <StackPanel>

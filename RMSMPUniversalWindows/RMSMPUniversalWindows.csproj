@@ -129,6 +129,12 @@
     </Page>
   </ItemGroup>
   <ItemGroup>
+    <PackageReference Include="microsoft.azure.devices">
+      <Version>1.3.1</Version>
+    </PackageReference>
+    <PackageReference Include="microsoft.azure.devices.client">
+      <Version>1.4.1</Version>
+    </PackageReference>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
       <Version>5.2.3</Version>
     </PackageReference>
