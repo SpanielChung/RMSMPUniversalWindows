@@ -31,11 +31,26 @@ namespace RMSMPUniversalWindows
 
         public DataPoints(List<DataPoints> list)
         {
+            //
+            this.deviceId = Settings.deviceId;
             this.timeStamp = list.FirstOrDefault().timeStamp;
-            this.groupingStamp = groupingStamp.AddMilliseconds(Settings.uploadInterval / 2);
+            this.groupingStamp = list.FirstOrDefault().groupingStamp.AddMilliseconds(Settings.uploadInterval / 2);
+            //
             this.returnAirHumidity = list.Average(x => x.returnAirHumidity);
             this.returnAirTemp = list.Average(x => x.returnAirTemp);
+            this.dischargeAirHumidity = list.Average(x => x.dischargeAirHumidity);
+            this.dischargeAirTemp = list.Average(x => x.dischargeAirTemp);
+            this.suctionTemp = list.Average(x => x.suctionTemp);
+            this.compressionTemp = list.Average(x => x.compressionTemp);
+            this.condensorTemp = list.Average(x => x.condensorTemp);
+            this.evaporatorTemp = list.Average(x => x.evaporatorTemp);
+            //
+            this.fanCurrent = list.Average(x => x.fanCurrent);
+            this.compressorCurrent = list.Average(x => x.compressorCurrent);
+            //
             this.sourceCount = list.Count();
+
+
         }
 
     }
