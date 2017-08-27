@@ -191,11 +191,8 @@ namespace RMSMPUniversalWindows
                 if (bytesRead > 0)
                 {
                     string message = dataReaderObject.ReadString(bytesRead);
-
-                    if (message.StartsWith("{\"returnAirTemp\""))
-                                            {
-                        ProcessData(message);
-                    }
+                     
+                    ProcessData(message);
 
 
                     //p.updateDataLog(message);
@@ -243,41 +240,53 @@ namespace RMSMPUniversalWindows
 
         private void ProcessData(string message)
         {
-            data.Text = message;
+            DataPoints dataPoints;
+            try
+            {
+                dataPoints = JsonConvert.DeserializeObject<DataPoints>(message);
+                data.Text = message;
+            }
+            catch(Exception e)
+            {
+                data.Text = e.Message;
+                return;
+            }
+
+            dataPoints.timeStamp = dataPoints.groupingStamp = DateTime.UtcNow;
+            string payload = JsonConvert.SerializeObject(dataPoints);
+            SendDeviceToCloudMessagesAsync(payload);
+            data.Text = payload;
             //  deserialize data into object
-            DataPoints dataPoints = JsonConvert.DeserializeObject<DataPoints>(message);
             // compare time stamps - we want to update every x seconds
             // if the data list is empty, then we want to add to it
-            if(dataPointsList.Count() > 0)
-            {
-                // 
-                if(dataPointsList[dataPointsList.Count()-1].groupingStamp > dataPoints.timeStamp.AddMilliseconds(-Settings.uploadInterval))
-                {
-                    dataPoints.groupingStamp = dataPointsList[dataPointsList.Count()-1].groupingStamp;
-                    dataPointsList.Add(dataPoints);
-                }
-                else
-                {
-                    // submit old data and start again
-                    DataPoints p = new DataPoints(dataPointsList);
-                    string payload = JsonConvert.SerializeObject(p);
-                    n.Text = p.sourceCount.ToString();
-                    x.Text = p.returnAirHumidity.ToString();
+            //if (dataPointsList.Count() > 0)
+            //{
+            //    // 
+            //    if (dataPointsList[dataPointsList.Count() - 1].groupingStamp > dataPoints.timeStamp.AddMilliseconds(-Settings.uploadInterval))
+            //    {
+            //        dataPoints.groupingStamp = dataPointsList[dataPointsList.Count() - 1].groupingStamp;
+            //        dataPointsList.Add(dataPoints);
+            //    }
+            //    else
+            //    {
+            //        // submit old data and start again
+            //        DataPoints p = new DataPoints(dataPointsList);
+            //        string payload = JsonConvert.SerializeObject(p);
+            //        n.Text = p.sourceCount.ToString();
+            //        x.Text = p.returnAirHumidity.ToString();
 
-                    //SendDeviceToCloudMessagesAsync(payload);
-                    //
-                    dataPointsList.Clear();
-                    dataPoints.groupingStamp = dataPoints.timeStamp;
-                    dataPointsList.Add(dataPoints);
-                }
-            }
-            else
-            {
-                dataPoints.groupingStamp = dataPoints.timeStamp;
-                dataPointsList.Add(dataPoints);
-            }
-
-
+            //        SendDeviceToCloudMessagesAsync(payload);
+            //        //
+            //        dataPointsList.Clear();
+            //        dataPoints.groupingStamp = dataPoints.timeStamp;
+            //        dataPointsList.Add(dataPoints);
+            //    }
+            //}
+            //else
+            //{
+            //    dataPoints.groupingStamp = dataPoints.timeStamp;
+            //    dataPointsList.Add(dataPoints);
+            //}
             //SendDeviceToCloudMessagesAsync(message);
         }
 
@@ -288,9 +297,7 @@ namespace RMSMPUniversalWindows
             AuthenticationMethodFactory.
             CreateAuthenticationWithRegistrySymmetricKey(Settings.deviceId, Settings.deviceKey),
             TransportType.Http1);
-
             var message = new Message(Encoding.ASCII.GetBytes(msg));
-
             await deviceClient.SendEventAsync(message);
         }
     }
