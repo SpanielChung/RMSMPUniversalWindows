@@ -34,7 +34,8 @@ namespace RMSMPUniversalWindows
         private SerialDevice serialPort = null;
         DataWriter dataWriteObject = null;
         DataReader dataReaderObject = null;
-        private string arduinoSerialName = "Arduino";
+        //private string arduinoSerialName = "Arduino";
+        private string arduinoSerialName = "USB Serial";
         private CancellationTokenSource ReadCancellationTokenSource;
         List<DataPoints> dataPointsList = new List<DataPoints>();
 
